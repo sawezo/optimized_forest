@@ -20,8 +20,12 @@ import math
 # Plotting Imports
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
+from matplotlib import colors
 import seaborn as sns # To improve graph aesthetic.
 sns.set_style("darkgrid")
+
+import matplotlib.animation as animation
+
 
 # DEBUG Imports
 import sys
@@ -29,7 +33,7 @@ import sys
 # =============================================================================
 # ==========================    INITIALIZE VARIABLES    =======================
 # =============================================================================
-L_values = [2] # 2, 32, 64, 128 
+L_values = [32] # 2, 32, 64, 128 
 D_values = [1] # [1,2,"L","L_squared"]
 
 # D2L2records = {} # The dictionary representing the main data structure to record 
@@ -159,6 +163,23 @@ def fix_chosen_index(chosen_index):
 
     return fixed_chosen_index
 
+def animate(frame_index):
+    """
+    fdsa
+    """
+    simulation_lattice = trees_added2lattice[frame_index] # +1 since frame_index is based at zero. 
+    index_zeros_len = len(np.argwhere(simulation_lattice==0).tolist())
+    
+    # This is to swap the color scheme to manually fix an error that would show the opposite plot. 
+    if index_zeros_len < 1:
+        color_map = colors.ListedColormap(['green', 'brown'])
+        plt.imshow(simulation_lattice, cmap=color_map, animated=True)
+
+    # If we aren't on the full forest, we do the same thing but with altered colorscheme. 
+    else:
+        color_map = colors.ListedColormap(['brown', 'green'])
+        plt.imshow(simulation_lattice, cmap=color_map, animated=True)
+
 # ========================      MAIN PROGRAM LOGIC     ========================
 # External Loop: For each D (way of placing an individual tree).
 for D in D_values:
@@ -179,11 +200,17 @@ for D in D_values:
     for L in L_values:
         density2average_yield = {}
         average_yield2lattice = {}
+        trees_added2lattice = {}
 
         l = L/10
         trees_added2average_yield = {}
         
         simulation_lattice = np.zeros((L,L)) # The lattice is initialized. 
+
+        # Adding the initial lattice to the animation records. 
+        trees_added2lattice[0] = simulation_lattice.copy() 
+
+        # plot_grid(simulation_lattice)
 
         # We start by getting a list of each index in the initialized lattice that is empty. 
         index_zeros = (np.argwhere(simulation_lattice==0)).tolist()
@@ -210,6 +237,7 @@ for D in D_values:
             # Now we iterate and calculate average cost based off of each test tree. 
             computed_sizes2tree_index = {}
             average_yield2index = {}
+
             trees_added += 1 # Incrementing this here since yield will need to be computed - 
             # - (used for density calculation).
             for test_tree_index in test_tree_indeces:                                
@@ -221,15 +249,12 @@ for D in D_values:
                 average_yield2index[average_yield] = test_tree_index
 
             highest_yield = max(average_yield2index.keys())
-
             chosen_index = average_yield2index[highest_yield]
-
-            print("HYEEE", highest_yield)
 
             # Removing the chosen index from our empty index list and adding it - 
             # - to the simulation lattice.             
             simulation_lattice[chosen_index[0], chosen_index[1]] = 1
-            
+
             # Since the test tree index has now been determined, we remove the - 
             # - index from the array of empty indeces. 
             try:
@@ -242,6 +267,9 @@ for D in D_values:
             # average_yield2lattice[highest_yield] = simulation_lattice
             # density2average_yield[density] = highest_yield  
             
+            # For animation.
+            trees_added2lattice[trees_added] = simulation_lattice.copy()
+
         # L2_records[L] = trees_added2average_yield
 
         if l_switch == True:
@@ -264,6 +292,11 @@ for D in D_values:
         # plt.show()
     
 # ========================      PLOTTING                  ========================
+fig = plt.figure()
+frame_count = len(trees_added2lattice.keys())
+ani = animation.FuncAnimation(fig, animate, frames=frame_count, repeat=True, interval=.01)
+plt.show()
+
 # print("NOW PLOTTING")
 # # Part a) Plot the forest at (approximate) peak yield.
 
