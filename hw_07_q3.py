@@ -33,8 +33,8 @@ import sys
 # =============================================================================
 # ==========================    INITIALIZE VARIABLES    =======================
 # =============================================================================
-L_values = [32] # 2, 32, 64, 128 
-D_values = [1] # [1,2,"L","L_squared"]
+L_values = [2, 32, 64] # 2, 32, 64, 128 
+D_values = [2] # [1,2,"L","L_squared"]
 
 # D2L2records = {} # The dictionary representing the main data structure to record 
 # # any generated data I compute below. 
@@ -187,7 +187,7 @@ for D in D_values:
     # L2_records = {}
     # L2max_yield  = {}
     # lowest_cost2lattice = {}
-
+    L_density2yields = []
     # Getting around some issues with making code run with String as D input. 
     l_switch = False
     l_square_switch = False
@@ -203,7 +203,7 @@ for D in D_values:
         trees_added2lattice = {}
 
         l = L/10
-        trees_added2average_yield = {}
+        average_yield2trees_added = {}
         
         simulation_lattice = np.zeros((L,L)) # The lattice is initialized. 
 
@@ -245,12 +245,13 @@ for D in D_values:
                 average_forest_fire_size = cost_calc(spark_probability_lattice, \
                                                      simulation_lattice, test_tree_index)
                 computed_sizes2tree_index[average_forest_fire_size] = test_tree_index
-                average_yield = (trees_added/(L**2)) - (average_forest_fire_size/(L**2))    
+                density = (trees_added/(L**2))
+                average_yield = density - (average_forest_fire_size/(L**2))    
                 average_yield2index[average_yield] = test_tree_index
 
             highest_yield = max(average_yield2index.keys())
             chosen_index = average_yield2index[highest_yield]
-
+               
             # Removing the chosen index from our empty index list and adding it - 
             # - to the simulation lattice.             
             simulation_lattice[chosen_index[0], chosen_index[1]] = 1
@@ -269,8 +270,10 @@ for D in D_values:
             
             # For animation.
             trees_added2lattice[trees_added] = simulation_lattice.copy()
+            average_yield2trees_added[highest_yield] = trees_added
+            density2average_yield[density] = highest_yield
 
-        # L2_records[L] = trees_added2average_yield
+        L_density2yields.append(density2average_yield)
 
         if l_switch == True:
             D = "L" # Updating the perimiter size with the current L size. 
@@ -292,37 +295,52 @@ for D in D_values:
         # plt.show()
     
 # ========================      PLOTTING                  ========================
+print("NOW PLOTTING")
+# Animation.
 fig = plt.figure()
 frame_count = len(trees_added2lattice.keys())
 ani = animation.FuncAnimation(fig, animate, frames=frame_count, repeat=True, interval=.01)
 plt.show()
 
-# print("NOW PLOTTING")
-# # Part a) Plot the forest at (approximate) peak yield.
+# Part a) Plot the forest at (approximate) peak yield.
+peak_yield = max(average_yield2trees_added.keys())
+trees_added_peak_yield = average_yield2trees_added[peak_yield]
+peak_yield_lattice = trees_added2lattice[trees_added_peak_yield]
+
+Q3a_fig = plt.figure()
+color_map = colors.ListedColormap(['brown', 'green'])
+plt.imshow(peak_yield_lattice, cmap=color_map)
+plt.show()
 
 # # Part b) Plot the yield curves for each value of D, and identify (approximately) the - 
 # # - peak yield and the density for which peak yield occurs for each value of D.
-# color_map = {2:"green", 32:"yellow", 64:"red", 128:"orange"}
+color_map = {2:"green", 32:"yellow", 64:"red", 128:"orange"}
+def yieldBYdensity_plotter(L_dictionary_datalist, D):
+    """
+    fdsa
+    """
+    # print(L_dictionary_datalist[0])
+    Q3pb = plt.figure()
+    axes = Q3pb.add_subplot(111)
+    for density2yields in L_density2yields:
+        x = list(density2yields.keys()) # Densities.
+        x.insert(0, 0)
+        y = list(density2yields.values())
+        y.insert(0, 0)
 
-# for D in D2L2records.keys():
-#     yieldBYD_one = plt.figure()
-#     axes = yieldBYD_one.add_subplot(111)
-#     for L in D2L2records[D].keys():
-#         L_treesadded2yield = D2L2records[D][L] 
-#         x = np.array(list(L_treesadded2yield.keys()))/(L**2) # Densities.
-#         y = list(L_treesadded2yield.values())
-#         axes.set_title("Yield Curve by Density $p$ for $D = $ {D}".format(D=D))
-#         axes.set_xlabel("Density $p$") # , ($log_{10}$)
-#         axes.set_ylabel("Average Yield $Y$") # , ($log_{10}$)
-#         green_patch = mpatches.Patch(color='green', label="$L=2$")
-#         yellow_patch = mpatches.Patch(color='yellow', label="$L=32$")
-#         red_patch = mpatches.Patch(color='red', label="$L=64$")
+        axes.set_title("Yield Curve by Density $p$ for $D = $ {D}".format(D=D))
+        axes.set_xlabel("Density $p$") # , ($log_{10}$)
+        axes.set_ylabel("Average Yield $Y$") # , ($log_{10}$)
+        green_patch = mpatches.Patch(color='green', label="$L=2$")
+        yellow_patch = mpatches.Patch(color='yellow', label="$L=32$")
+        red_patch = mpatches.Patch(color='red', label="$L=64$")
+        # cmap=color_map[L],
+        plt.legend(handles=[green_patch, yellow_patch, red_patch])
+        axes.plot(x, y, linestyle='-',  label='L = {L}'.format(L=L))
+        # plt.savefig('q3_b.png', bbox_inches='tight')
+    plt.show()
 
-#         plt.legend(handles=[green_patch, yellow_patch, red_patch])
-#         axes.plot(x, y, linestyle='-', color=color_map[L], label='L = {L}'.format(L=L))
-#         plt.savefig('q3_b.png', bbox_inches='tight')
-
-#     plt.show()
+yieldBYdensity_plotter(L_density2yields, D)
 
 # Part c) Plot distributions of tree component sizes S at peak yield. Note: You will 
 # have to rebuild forests and stop at the peak yield value of D to find these 
