@@ -21,35 +21,111 @@ import math
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 from matplotlib import colors
-import seaborn as sns # To improve graph aesthetic.
+import seaborn as sns 
 sns.set_style("darkgrid")
-
 import matplotlib.animation as animation
-
 
 # DEBUG Imports
 import sys
 
 # =============================================================================
-# ==========================    INITIALIZE VARIABLES    =======================
+# ==========================    "KNOB" VARIABLES    ===========================
 # =============================================================================
-L_values = [2, 32] # 2, 32, 64, 128 
-D_values = [2] # [1,2,"L","L_squared"]
+L_values = [2] # 2, 32, 64, 128 
+D_values = [1] # [1,2,"L","L_squared"]
 
 # D2L2records = {} # The dictionary representing the main data structure to record 
 # # any generated data I compute below. 
 # D2L2max_yields = {} # For recording and plotting max yield for each L, etc. 
 
-
-# # TERMINAL OUTPUT OF PROGRESS (FOR USAGE DURING LONG SIMULATIONS)
-# L_squares = [L**2 for L in L_values]
-# L_total = np.sum(np.array(L_squares))  
-# D_total = np.sum(np.array(D_values))  
-# main_total = D_total * L_total
-# User output incrementing.
-# i = 0
-
+# =============================================================================
 # ========================      FUNCTIONS     =================================
+# =============================================================================
+def main(L_values, D_values):
+    """
+    fdsa
+    """
+    print("--- NOW RUNNING SIMULATIONS ---")
+    for D in D_values:
+        for L in L_values:
+            trees_added2lattice, average_yield2trees_added = simulator(D, L)
+            
+    print("--- NOW PLOTTING ---")
+    # Call to run animation functionality.
+    display = False
+    
+    run_animation(display, trees_added2lattice)
+    lattice_frame_grapher(display, average_yield2trees_added, trees_added2lattice)
+   
+    #yieldBYdensity_grapher(display, D)
+
+def simulator(D, L):
+    """
+    fdsa
+    """
+    # Addressing any issues from type(L) == String.
+    if D == "L":
+        D = L
+    if D == "L_squared":
+        D = L**2
+
+    # We start this process by defining data structures we are going to be utilizing. 
+    trees_added2lattice = {} # For holding data to animate.
+    average_yield2trees_added = {} # For plotting max yield data. 
+    trees_added = 0
+
+    # Initializing both the spark and the empty simulation lattice (the latter being that we look to fill). 
+    simulation_lattice = np.zeros((L,L)) # The lattice is initialized. 
+    # We get a list of each index in the initialized lattice that is empty. 
+    index_zeros = (np.argwhere(simulation_lattice==0)).tolist()
+    spark_probability_lattice = spark_probability_matrix(index_zeros)
+
+    # Adding the initial lattice to the animation records. 
+    trees_added2lattice[0] = simulation_lattice.copy() 
+    
+    # We want to run this simulation as long as there are empty spaces available. 
+    while len(index_zeros) > 0:
+        # For each draw we have (depending on the current value of D), we draw an empty index. 
+        try:
+            test_tree_indeces = random.sample(index_zeros, D)
+        # Catching case of D > remaining number of indeces to potentially plant a tree at. 
+        except ValueError:
+            # The next best case is taking as many empty options as we can.
+            test_tree_indeces = np.argwhere(simulation_lattice==0)
+
+        # Now we iterate and calculate average cost based off of each test tree. 
+        average_yield2index = {}
+
+        trees_added += 1 # Incrementing this here since yield will need to be computed - 
+        # - (used for density calculation) to select which tree to add.
+        for test_tree_index in test_tree_indeces:                                
+            # Computing and saving our average forest fire size for this test tree. 
+            average_forest_fire_size = cost_calc(spark_probability_lattice, \
+                                                simulation_lattice, test_tree_index)
+            density = (trees_added/(L**2))
+            average_yield = density - (average_forest_fire_size/(L**2)) # We want cost in terms of density.    
+            average_yield2index[average_yield] = test_tree_index
+
+        # Selecting the index with highest yield.
+        highest_yield = max(average_yield2index.keys())
+        chosen_index = average_yield2index[highest_yield]
+        
+        # Removing the chosen index from our "empty" index list and adding it to the simulation lattice.             
+        simulation_lattice[chosen_index[0], chosen_index[1]] = 1
+
+        # Since the test tree index has now been determined, we remove the - 
+        # - index from the array of empty indeces. 
+        try:
+            index_zeros.remove(chosen_index)
+        except ValueError: # From array error described more in fix_chosen_index() function description.
+            fixed_chosen_index = fix_chosen_index(chosen_index)
+            index_zeros.remove(fixed_chosen_index)
+
+        trees_added2lattice[trees_added] = simulation_lattice.copy() # For animation.
+        average_yield2trees_added[highest_yield] = trees_added # For plotting peak yield.
+
+    return trees_added2lattice, average_yield2trees_added
+
 def spark_probability_matrix(index_list):
     """
     - Function Description:
@@ -163,166 +239,59 @@ def fix_chosen_index(chosen_index):
 
     return fixed_chosen_index
 
-def animate(frame_index):
+def run_animation(display, trees_added2lattice):
     """
     fdsa
     """
-    simulation_lattice = trees_added2lattice[frame_index] # +1 since frame_index is based at zero. 
-    index_zeros_len = len(np.argwhere(simulation_lattice==0).tolist())
+    def animate(frame_index):
+        """
+        fdsa
+        """
+        # Internal Function Code.
+        simulation_lattice = trees_added2lattice[frame_index] 
+        index_zeros_len = len(np.argwhere(simulation_lattice==0).tolist())
     
-    # This is to swap the color scheme to manually fix an error that would show the opposite plot. 
-    if index_zeros_len < 1:
-        color_map = colors.ListedColormap(['green', 'brown'])
-        plt.imshow(simulation_lattice, cmap=color_map, animated=True)
+        # This is to swap the color scheme to manually fix an error that would show the opposite plot. 
+        if index_zeros_len < 1:
+            color_map = colors.ListedColormap(['green', 'brown'])
+            plt.imshow(simulation_lattice, cmap=color_map, animated=True)
 
-    # If we aren't on the full forest, we do the same thing but with altered colorscheme. 
-    else:
+        # If we aren't on the full forest, we do the same thing but with altered colorscheme. 
+        else:
+            color_map = colors.ListedColormap(['brown', 'green'])
+            plt.imshow(simulation_lattice, cmap=color_map, animated=True)
+
+    # External Function Code.
+    fig = plt.figure()
+    frame_count = len(trees_added2lattice.keys())
+    ani = animation.FuncAnimation(fig, animate, frames=frame_count, repeat=True, interval=1)
+    
+    if display == True:
+        plt.show()
+
+def lattice_frame_grapher(display, average_yield2trees_added, trees_added2lattice):
+        """
+        fdsa
+        """
+        # Plotting the forest at (approximate) peak yield.
+        peak_yield = max(average_yield2trees_added.keys())
+        trees_added_peak_yield = average_yield2trees_added[peak_yield]
+        peak_yield_lattice = trees_added2lattice[trees_added_peak_yield]
+
+        Q3a_fig = plt.figure()
         color_map = colors.ListedColormap(['brown', 'green'])
-        plt.imshow(simulation_lattice, cmap=color_map, animated=True)
+        plt.imshow(peak_yield_lattice, cmap=color_map)
 
-# ========================      MAIN PROGRAM LOGIC     ========================
-def main_iterator(D, L):
-    """
-    fdsa
-    """
-    # Addressing any issues from type(L) == String.
-    if D == "L":
-        D = L
-    if D == "L_squared":
-        D = L**2
+        if display == True:
+            plt.show()
 
-    # We start this process by defining data structures we are going to be utilizing. 
-    L_density2yields = []
-    density2average_yield = {}
-    average_yield2lattice = {}
-    trees_added2lattice = {}
-    average_yield2trees_added = {}
-    trees_added = 0
-
-    # Initializing both the spark and the empty simulation lattice (the latter being that we look to fill). 
-    simulation_lattice = np.zeros((L,L)) # The lattice is initialized. 
-    # We get a list of each index in the initialized lattice that is empty. 
-    index_zeros = (np.argwhere(simulation_lattice==0)).tolist()
-    spark_probability_lattice = spark_probability_matrix(index_zeros)
-
-    # Adding the initial lattice to the animation records. 
-    trees_added2lattice[0] = simulation_lattice.copy() 
-    
-    # We want to run this simulation as long as there are empty spaces available. 
-    while len(index_zeros) > 0:  
-        # Now to reset the perimiter variable we used as a dummy variable:
-        if l_square_switch == True:
-            D = L # Updating the perimiter size with the current L size. 
-        if l_square_switch == True:
-            D = L**2
-
-        # For each draw we have (depending on the current value of D), we draw an empty index. 
-        try:
-            test_tree_indeces = random.sample(index_zeros, D)
-        # Catching case of D > remaining number of indeces to potentially plant a tree at. 
-        except ValueError:
-            # The next best case is taking as many empty options as we can.
-            test_tree_indeces = np.argwhere(simulation_lattice==0)
-
-        # Now we iterate and calculate average cost based off of each test tree. 
-        computed_sizes2tree_index = {}
-        average_yield2index = {}
-
-        trees_added += 1 # Incrementing this here since yield will need to be computed - 
-        # - (used for density calculation).
-        for test_tree_index in test_tree_indeces:                                
-            # Computing and saving our average forest fire size for this test tree. 
-            average_forest_fire_size = cost_calc(spark_probability_lattice, \
-                                                simulation_lattice, test_tree_index)
-            computed_sizes2tree_index[average_forest_fire_size] = test_tree_index
-            density = (trees_added/(L**2))
-            average_yield = density - (average_forest_fire_size/(L**2))    
-            average_yield2index[average_yield] = test_tree_index
-
-        highest_yield = max(average_yield2index.keys())
-        chosen_index = average_yield2index[highest_yield]
-        
-        # Removing the chosen index from our empty index list and adding it - 
-        # - to the simulation lattice.             
-        simulation_lattice[chosen_index[0], chosen_index[1]] = 1
-
-        # Since the test tree index has now been determined, we remove the - 
-        # - index from the array of empty indeces. 
-        try:
-            index_zeros.remove(chosen_index)
-        except ValueError: # From array error described more in fix_chosen_index() function description.
-            fixed_chosen_index = fix_chosen_index(chosen_index)
-            index_zeros.remove(fixed_chosen_index)
-
-        # We calculate the yield associated with this tree from the cost.             
-        # average_yield2lattice[highest_yield] = simulation_lattice
-        # density2average_yield[density] = highest_yield  
-        
-        # For animation.
-        trees_added2lattice[trees_added] = simulation_lattice.copy()
-        average_yield2trees_added[highest_yield] = trees_added
-        density2average_yield[density] = highest_yield
-
-    L_density2yields.append(density2average_yield)
-
-    if l_switch == True:
-        D = "L" # Updating the perimiter size with the current L size. 
-    if l_square_switch == True:
-        D = "L_squared"
-
-    # max_yield = max(trees_added2average_yield.values())
-    # L2max_yield[L] = max_yield
-
-    # max_yield_printer(max_yield)
-    
-    # Part b) Plots
-    # print(density2average_yield.values())
-    # highest_yield = max(density2average_yield.values())
-    # print(average_yield2lattice[highest_yield])
-    # print(highest_yield)
-    # print('fo', np.argwhere(average_yield2lattice[highest_yield]==0).tolist())
-    # plt.imshow(average_yield2lattice[highest_yield])
-    # plt.show()
-
-
-def main():
-    """
-    fdsa
-    """
-    for D in D_values:
-        for L in L_values:
-            main_iterator(D, L)
-
-main()
-
-# ========================      PLOTTING                  ========================
-print("NOW PLOTTING")
-# Animation.
-
-# fig = plt.figure()
-# frame_count = len(trees_added2lattice.keys())
-# ani = animation.FuncAnimation(fig, animate, frames=frame_count, repeat=True, interval=.01)
-# plt.show()
-
-# Part a) Plot the forest at (approximate) peak yield.
-
-peak_yield = max(average_yield2trees_added.keys())
-trees_added_peak_yield = average_yield2trees_added[peak_yield]
-peak_yield_lattice = trees_added2lattice[trees_added_peak_yield]
-
-# Q3a_fig = plt.figure()
-# color_map = colors.ListedColormap(['brown', 'green'])
-# plt.imshow(peak_yield_lattice, cmap=color_map)
-# plt.show()
-
-# # Part b) Plot the yield curves for each value of D, and identify (approximately) the - 
-# # - peak yield and the density for which peak yield occurs for each value of D.
-
-# color_map = {2:"green", 32:"yellow", 64:"red", 128:"orange"}
-# def yieldBYdensity_plotter(L_dictionary_datalist, D):
+# def yieldBYdensity_plotter(display, D):
 #     """
 #     fdsa
 #     """
+#     # Plotting the yield curves for each value of D, and identifying (approximately) the - 
+#     # - peak yield and density for which peak yield occurs on each
+#     # color_map = {2:"green", 32:"yellow", 64:"red", 128:"orange"}
 #     # print(L_dictionary_datalist[0])
 #     Q3pb = plt.figure()
 #     axes = Q3pb.add_subplot(111)
@@ -342,45 +311,50 @@ peak_yield_lattice = trees_added2lattice[trees_added_peak_yield]
 #         plt.legend(handles=[green_patch, yellow_patch, red_patch])
 #         axes.plot(x, y, linestyle='-',  label='L = {L}'.format(L=L))
 #         # plt.savefig('q3_b.png', bbox_inches='tight')
+#     if display == True:
+#         plt.show()
+
+# def component_frequency_grapher():
+#     """
+#     fdsa
+#     """
+#     # Plotting distributions of tree component size `S` at peak yield. 
+#     # Calculating the connected components. 
+#     connected_components = measure.label(peak_yield_lattice, connectivity=1)
+#     # From skimage docs: "A labeled array, where all connected regions are -
+#     # - assigned the same integer value."
+
+#     # Now that we have anlayzed connected component data, we analyze potential fire sizes. 
+#     unique, counts = np.unique(connected_components, return_counts=True)
+#     components2size = dict(zip(unique, counts))
+
+#     freqBYcomponent_size = plt.figure()
+#     axes = freqBYcomponent_size.add_subplot(111)
+#     # color_map = {20:"black", 50:"green", 100:"yellow", 200:"orange", 500:"red",1000:"blue"}
+
+#     # for L in L2runningAvg_pvals.keys():
+#     x = components2size.values() # The x axis is .
+#     y = components2size.keys() # The y axis is . 
+#     axes.scatter(x, y) #, color=color_map[L]
+        
+#     # Labelling and making the plot output look nicer. 
+#     # axes.set_title("$S_{avg}$ by Probability Value $p$")
+#     axes.set_xlabel("Component Size") # , ($log_{10}$)
+#     # axes.set_ylabel("$S_{avg}$") # , ($log_{10}$)
+#     # axes.legend(['$L = 20$','$L = 50$','$L = 100$','$L = 200$','$L = 500$']) # ,'$L = 1000$'
 #     plt.show()
 
-# yieldBYdensity_plotter(L_density2yields, D)
-
-# Part c) Plot distributions of tree component sizes S at peak yield. Note: You will 
-# have to rebuild forests and stop at the peak yield value of D to find these 
-# distributions. By recording the sequence of optimal tree planting, this can be 
-# done without running the simulation again.
-
- # Calculating the connected components. 
-connected_components = measure.label(peak_yield_lattice, connectivity=1)
-# From skimage docs: "A labeled array, where all connected regions are -
-# - assigned the same integer value."
-
-# Now that we have anlayzed connected component data, we analyze potential fire sizes. 
-unique, counts = np.unique(connected_components, return_counts=True)
-components2size = dict(zip(unique, counts))
-
-freqBYcomponent_size = plt.figure()
-axes = freqBYcomponent_size.add_subplot(111)
-# color_map = {20:"black", 50:"green", 100:"yellow", 200:"orange", 500:"red",1000:"blue"}
-
-#for L in L2runningAvg_pvals.keys():
-x = components2size.values() # The x axis is .
-y = components2size.keys() # The y axis is . 
-axes.scatter(x, y) #, color=color_map[L]
-    
-# Labelling and making the plot output look nicer. 
-# axes.set_title("$S_{avg}$ by Probability Value $p$")
-axes.set_xlabel("Component Size") # , ($log_{10}$)
-# axes.set_ylabel("$S_{avg}$") # , ($log_{10}$)
-# axes.legend(['$L = 20$','$L = 50$','$L = 100$','$L = 200$','$L = 500$']) # ,'$L = 1000$'
-plt.show()
-
-# Part d) Extra level: Plot size distributions for D = L2 for varying tree densities
-# ρ = 0.10, 0.20, . . . , 0.90. This will be an effort to reproduce Fig. 3b in [2].
+# =============================================================================
+# ========================      MAIN LOGIC CALL        ========================
+# =============================================================================
+main(L_values, D_values)
 
 # ========================      SCRAP                  ========================
-# average_forest_fire_size = 0 # A counter for the average forest fire size at this iteration. 
+
 
 # ========================      Q's/ OTHER                  ===================
-# density = trees_added/(L**2)
+# TO-DO:
+    # Part d) Extra level: Plot size distributions for D = L2 for varying tree densities
+    # ρ = 0.10, 0.20, . . . , 0.90. This will be an effort to reproduce Fig. 3b in [2].
+
+    # save animation imaging to computer.
