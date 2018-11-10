@@ -29,7 +29,7 @@ import sys
 # =============================================================================
 # ==========================    INITIALIZE VARIABLES    =======================
 # =============================================================================
-L_values = [2, 32] #2, 32, 64, 128 
+L_values = [2] # 2, 32, 64, 128 
 D_values = [1] # [1,2,"L","L_squared"]
 
 # D2L2records = {} # The dictionary representing the main data structure to record 
@@ -94,8 +94,8 @@ def cost_calc(spark_probability_lattice, simulation_lattice, test_tree_index):
     # First we are going to copy the current simulation lattice before adding a tree - 
     # theoretically, to stop any potential errors with overwrititng the initial lattice. 
     test_lattice = simulation_lattice.copy()
-    test_lattice[test_tree_index] = 1
-    
+    test_lattice[test_tree_index[0],test_tree_index[1]] = 1
+
     # Calculating the connected components. 
     connected_components = measure.label(test_lattice, connectivity=1)
     # From skimage docs: "A labeled array, where all connected regions are -
@@ -110,17 +110,15 @@ def cost_calc(spark_probability_lattice, simulation_lattice, test_tree_index):
     
     # Now for each tree in the test lattice we will compute cost at that lattice grid. 
     # Note indexes that represent empty spaces will have cost of zero to increment, so we skip them. 
-        
+
     for tree_index in tree_indeces:
         # Getting the componenet size of the current test tree index we are considering. 
         tree_component_value = connected_components[tree_index[0], tree_index[1]]
-
         component_size = components2size[tree_component_value]
-        
+
         spark_probability = spark_probability_lattice[tree_index[0], tree_index[1]]
-        
         average_size_of_fire = (component_size * spark_probability)
-        
+
         # Incrementing our calculated cost value. 
         average_forest_fire_size += average_size_of_fire # Note we have the average forest fire size equation. 
 
@@ -191,13 +189,10 @@ for D in D_values:
         index_zeros = (np.argwhere(simulation_lattice==0)).tolist()
         
         spark_probability_lattice = spark_probability_matrix(index_zeros)
-    
+
         # We want to run this simulation as long as there are empty spaces available. 
         trees_added = 0
-        while len(index_zeros) > 0:            
-            trees_added += 1 # Note we are counting the addition of a tree from this very iteration.
-            density = trees_added/(L**2)
-
+        while len(index_zeros) > 0:  
             # Now to reset the perimiter variable we used as a dummy variable:
             if l_square_switch == True:
                 D = L # Updating the perimiter size with the current L size. 
@@ -214,29 +209,27 @@ for D in D_values:
 
             # Now we iterate and calculate average cost based off of each test tree. 
             computed_sizes2tree_index = {}
-            
+            average_yield2index = {}
+            trees_added += 1 # Incrementing this here since yield will need to be computed - 
+            # - (used for density calculation).
             for test_tree_index in test_tree_indeces:                                
                 # Computing and saving our average forest fire size for this test tree. 
                 average_forest_fire_size = cost_calc(spark_probability_lattice, \
                                                      simulation_lattice, test_tree_index)
                 computed_sizes2tree_index[average_forest_fire_size] = test_tree_index
-            
-            # The density will be the same for all of the above. We want the average forest fire - 
-            # - size, so we calculate that now below. 
-            # Once we have completed this process for all potential new tree indeces, - 
-            # - we select the lowest one (lowest cost). 
-            total_fire_size = 0
-            for fire_size in computed_sizes2tree_index.keys():
-                total_fire_size += fire_size
-            average_forest_fire_size = total_fire_size/len(test_tree_indeces)
-            
-            highest_yield = max(timber_yield2index.keys())
-            chosen_index = timber_yield2index[highest_yield]
-            
+                average_yield = (trees_added/(L**2)) - (average_forest_fire_size/(L**2))    
+                average_yield2index[average_yield] = test_tree_index
+
+            highest_yield = max(average_yield2index.keys())
+
+            chosen_index = average_yield2index[highest_yield]
+
+            print("HYEEE", highest_yield)
+
             # Removing the chosen index from our empty index list and adding it - 
             # - to the simulation lattice.             
             simulation_lattice[chosen_index[0], chosen_index[1]] = 1
-
+            
             # Since the test tree index has now been determined, we remove the - 
             # - index from the array of empty indeces. 
             try:
@@ -246,8 +239,8 @@ for D in D_values:
                 index_zeros.remove(fixed_chosen_index)
 
             # We calculate the yield associated with this tree from the cost.             
-            average_yield2lattice[highest_yield] = simulation_lattice
-            density2average_yield[density] = highest_yield  
+            # average_yield2lattice[highest_yield] = simulation_lattice
+            # density2average_yield[density] = highest_yield  
             
         # L2_records[L] = trees_added2average_yield
 
@@ -262,11 +255,11 @@ for D in D_values:
         # max_yield_printer(max_yield)
         
         # Part b) Plots
-        print(density2average_yield.values())
-        highest_yield = max(density2average_yield.values())
-        print(average_yield2lattice[highest_yield])
-        print(highest_yield)
-        print('fo', np.argwhere(average_yield2lattice[highest_yield]==0).tolist())
+        # print(density2average_yield.values())
+        # highest_yield = max(density2average_yield.values())
+        # print(average_yield2lattice[highest_yield])
+        # print(highest_yield)
+        # print('fo', np.argwhere(average_yield2lattice[highest_yield]==0).tolist())
         # plt.imshow(average_yield2lattice[highest_yield])
         # plt.show()
     
