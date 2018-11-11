@@ -16,6 +16,7 @@ import numpy as np
 from skimage import measure
 import random as random
 import math
+from collections import Counter
 
 # Plotting Imports
 import matplotlib.pyplot as plt
@@ -31,7 +32,7 @@ import sys
 # =============================================================================
 # ==========================    "KNOB" VARIABLES    ===========================
 # =============================================================================
-L_values = [2] # 2, 32, 64, 128 
+L_values = [64] # 2, 32, 64, 128 
 D_values = [1] # [1,2,"L","L_squared"]
 
 # D2L2records = {} # The dictionary representing the main data structure to record 
@@ -46,18 +47,33 @@ def main(L_values, D_values):
     fdsa
     """
     print("--- NOW RUNNING SIMULATIONS ---")
+    # Call to run animation functionality.
+    display = True
+    logg = True 
+
     for D in D_values:
+        yields2trees_added_LIST = [] # Will reset this for each D value. 
+
         for L in L_values:
             trees_added2lattice, average_yield2trees_added = simulator(D, L)
+
+            # Running the animation for this simulation. 
+            # run_animation(display, trees_added2lattice)
+
+            # We are going to want to analyze the specific peak yield state. 
+            peak_yield = max(average_yield2trees_added.keys())
+            trees_added_peak_yield = average_yield2trees_added[peak_yield]
+            peak_yield_lattice = trees_added2lattice[trees_added_peak_yield]
+
+            # Plots of max yield (topographical map view).
+            #lattice_frame_grapher(display, peak_yield_lattice, D, L) 
             
-    print("--- NOW PLOTTING ---")
-    # Call to run animation functionality.
-    display = False
-    
-    run_animation(display, trees_added2lattice)
-    lattice_frame_grapher(display, average_yield2trees_added, trees_added2lattice)
-   
-    #yieldBYdensity_grapher(display, D)
+            # We want to inquire more about 
+            component_frequency_grapher(display, peak_yield_lattice, D, L, logg)
+
+            #yields2trees_added_LIST.append(average_yield2trees_added) # For plotting yields by densities later
+        # Now to plot the peak yield curves for this value of D.
+        #yieldBYdensity_grapher(display, D, yields2trees_added_LIST)
 
 def simulator(D, L):
     """
@@ -269,80 +285,126 @@ def run_animation(display, trees_added2lattice):
     if display == True:
         plt.show()
 
-def lattice_frame_grapher(display, average_yield2trees_added, trees_added2lattice):
+def lattice_frame_grapher(display, peak_yield_lattice, D, L):
         """
         fdsa
         """
-        # Plotting the forest at (approximate) peak yield.
-        peak_yield = max(average_yield2trees_added.keys())
-        trees_added_peak_yield = average_yield2trees_added[peak_yield]
-        peak_yield_lattice = trees_added2lattice[trees_added_peak_yield]
-
         Q3a_fig = plt.figure()
+        axes = Q3a_fig.add_subplot(111)
+        axes.set_title("Tree Space at Optimal Yield, Design Parameter $D$ = {D}".format(D=D))
+        axes.set_xlabel("$L$ = {L}".format(L=L))
+        green_patch = mpatches.Patch(color='green', label="tree")
+        brown_patch = mpatches.Patch(color='brown', label="dirt")
+        plt.legend(handles=[green_patch, brown_patch])
+
         color_map = colors.ListedColormap(['brown', 'green'])
         plt.imshow(peak_yield_lattice, cmap=color_map)
+
+        plt.savefig("peak_yield_L{L}_D{D}.png".format(L=L, D=D))
 
         if display == True:
             plt.show()
 
-# def yieldBYdensity_plotter(display, D):
-#     """
-#     fdsa
-#     """
-#     # Plotting the yield curves for each value of D, and identifying (approximately) the - 
-#     # - peak yield and density for which peak yield occurs on each
-#     # color_map = {2:"green", 32:"yellow", 64:"red", 128:"orange"}
-#     # print(L_dictionary_datalist[0])
-#     Q3pb = plt.figure()
-#     axes = Q3pb.add_subplot(111)
-#     for density2yields in L_density2yields:
-#         x = list(density2yields.keys()) # Densities.
-#         x.insert(0, 0)
-#         y = list(density2yields.values())
-#         y.insert(0, 0)
+def yieldBYdensity_grapher(display, D, yields2trees_added_LIST):
+    """
+    fdsa
+    """
+    # Plotting the yield curves for each value of D, and identifying (approximately) the - 
+    # - peak yield and density for which peak yield occurs on each
+    # color_map = {2:"green", 32:"yellow", 64:"red", 128:"orange"}
+    # print(L_dictionary_datalist[0])
+    Q3pb = plt.figure()
+    axes = Q3pb.add_subplot(111)
+    max_yield2density = {} # To fill and caluclate max yield over all L's to user terminal. 
 
-#         axes.set_title("Yield Curve by Density $p$ for $D = $ {D}".format(D=D))
-#         axes.set_xlabel("Density $p$") # , ($log_{10}$)
-#         axes.set_ylabel("Average Yield $Y$") # , ($log_{10}$)
-#         green_patch = mpatches.Patch(color='green', label="$L=2$")
-#         yellow_patch = mpatches.Patch(color='yellow', label="$L=32$")
-#         red_patch = mpatches.Patch(color='red', label="$L=64$")
-#         # cmap=color_map[L],
-#         plt.legend(handles=[green_patch, yellow_patch, red_patch])
-#         axes.plot(x, y, linestyle='-',  label='L = {L}'.format(L=L))
-#         # plt.savefig('q3_b.png', bbox_inches='tight')
-#     if display == True:
-#         plt.show()
+    for average_yield2trees_added in yields2trees_added_LIST:        
+        trees_added = np.array(list(average_yield2trees_added.values()))
+        densities = trees_added/len(average_yield2trees_added.values())
+        x = list(densities) # Densities.
+        x.insert(0, 0)
 
-# def component_frequency_grapher():
-#     """
-#     fdsa
-#     """
-#     # Plotting distributions of tree component size `S` at peak yield. 
-#     # Calculating the connected components. 
-#     connected_components = measure.label(peak_yield_lattice, connectivity=1)
-#     # From skimage docs: "A labeled array, where all connected regions are -
-#     # - assigned the same integer value."
+        yields = list(average_yield2trees_added.keys())
+        y = yields
+        y.insert(0, 0)
 
-#     # Now that we have anlayzed connected component data, we analyze potential fire sizes. 
-#     unique, counts = np.unique(connected_components, return_counts=True)
-#     components2size = dict(zip(unique, counts))
+        L = math.sqrt(len(average_yield2trees_added.keys()))
 
-#     freqBYcomponent_size = plt.figure()
-#     axes = freqBYcomponent_size.add_subplot(111)
-#     # color_map = {20:"black", 50:"green", 100:"yellow", 200:"orange", 500:"red",1000:"blue"}
+        axes.set_title("Yield Curve by Density $p$ for $D = $ {D}".format(D=D))
+        axes.set_xlabel("Density $p$") 
+        axes.set_ylabel("Average Yield $<Y> = p - <c>$") 
 
-#     # for L in L2runningAvg_pvals.keys():
-#     x = components2size.values() # The x axis is .
-#     y = components2size.keys() # The y axis is . 
-#     axes.scatter(x, y) #, color=color_map[L]
+        green_patch = mpatches.Patch(color='green', label="$L=2$")
+        yellow_patch = mpatches.Patch(color='yellow', label="$L=32$")
+        red_patch = mpatches.Patch(color='red', label="$L=64$")
+
+        plt.legend(handles=[green_patch, yellow_patch, red_patch])
+        cmap = {2:'green', 32:'yellow', 64:'red'}
+        axes.plot(x, y, linestyle='-',  label='L = {L}'.format(L=L), color=cmap[L])
+
+        plt.savefig("yield_by_density_D{D}.png".format(D=D))
+
+        max_yield = max(yields)
+        density_at_max = average_yield2trees_added[max_yield]/(L**2)
+
+        max_yield2density[max_yield] = density_at_max
+    
+    peak_yield = max(max_yield2density.keys())
+    print("Peak yield when D = {D} :".format(D=D), peak_yield)
+    print("Density at this peak yield :", max_yield2density[peak_yield])
+
+    if display == True:
+        plt.show()
+
+def component_frequency_grapher(display, peak_yield_lattice, D, L, logg):
+    """
+    fdsa
+    """
+    # Plotting distributions of tree component size `S` at peak yield. 
+    # Calculating the connected components. 
+    connected_components = measure.label(peak_yield_lattice, connectivity=1)
+
+    # Now that we have anlayzed connected component data, we analyze potential fire sizes. 
+    unique, counts = np.unique(connected_components, return_counts=True)
+    components2size = dict(zip(unique, counts))
+
+    # We don't want to consider the empty squares here. 
+    del components2size[0]
+
+    counter_object = Counter(components2size)
+    component_size2count = dict(counter_object.items())
+
+    freqBYcomponent_size = plt.figure()
+    axes = freqBYcomponent_size.add_subplot(111)
+    # color_map = {20:"black", 50:"green", 100:"yellow", 200:"orange", 500:"red",1000:"blue"}
+
+    # for L in L2runningAvg_pvals.keys():
+    x = list(component_size2count.keys()) # The x axis is the sizes S of the components.
+    y = list(component_size2count.values()) # The y axis is the number of components of this size in the peak lattice. 
+    
+    axes.scatter(x, y, color="purple", alpha=0.33) 
         
-#     # Labelling and making the plot output look nicer. 
-#     # axes.set_title("$S_{avg}$ by Probability Value $p$")
-#     axes.set_xlabel("Component Size") # , ($log_{10}$)
-#     # axes.set_ylabel("$S_{avg}$") # , ($log_{10}$)
-#     # axes.legend(['$L = 20$','$L = 50$','$L = 100$','$L = 200$','$L = 500$']) # ,'$L = 1000$'
-#     plt.show()
+    # Labelling and making the plot output look nicer. 
+    axes.set_title("Component Size $S$ Frequencies, D = {D}, L = {L}".format(D=D, L=L))
+    axes.set_xlabel("Component Size $S$") # , ($log_{10}$)
+    axes.set_ylabel("Count of Components of Size $N$") # , ($log_{10}$)
+    # axes.legend(['$L = 20$','$L = 50$','$L = 100$','$L = 200$','$L = 500$']) # ,'$L = 1000$'
+    
+    plt.savefig("component_frequency{D}.png".format(D=D))
+
+    if display == True:
+        plt.show()
+
+    if logg == True:
+        freqBYcomponent_size_LOG = plt.figure()
+        axes = freqBYcomponent_size_LOG.add_subplot(111)
+        
+        axes.scatter(np.log10(x), np.log10(y), color="purple", alpha=0.33)
+        axes.set_title("Component Size $S$ Frequencies, D = {D}, L = {L}".format(D=D, L=L))
+        axes.set_xlabel("Component Size $S$, ($log_{10}$)")
+        axes.set_ylabel("Count of Components of Size $N$, ($log_{10}$)")
+        # axes.legend(['$L = 20$','$L = 50$','$L = 100$','$L = 200$','$L = 500$']) # ,'$L = 1000$'
+        plt.savefig("component_frequency_log{D}.png".format(D=D))
+        plt.show()
 
 # =============================================================================
 # ========================      MAIN LOGIC CALL        ========================
