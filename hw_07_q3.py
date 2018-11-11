@@ -32,8 +32,8 @@ import sys
 # =============================================================================
 # ==========================    "KNOB" VARIABLES    ===========================
 # =============================================================================
-L_values = [64] # 2, 32, 64, 128 
-D_values = [1] # [1,2,"L","L_squared"]
+L_values = [2,4,16,32] # 2, 32, 64, 128 
+D_values = [2] # [1,2,"L","L_squared"]
 
 # D2L2records = {} # The dictionary representing the main data structure to record 
 # # any generated data I compute below. 
@@ -58,7 +58,7 @@ def main(L_values, D_values):
             trees_added2lattice, average_yield2trees_added = simulator(D, L)
 
             # Running the animation for this simulation. 
-            # run_animation(display, trees_added2lattice)
+            run_animation(display, trees_added2lattice)
 
             # We are going to want to analyze the specific peak yield state. 
             peak_yield = max(average_yield2trees_added.keys())
@@ -66,14 +66,14 @@ def main(L_values, D_values):
             peak_yield_lattice = trees_added2lattice[trees_added_peak_yield]
 
             # Plots of max yield (topographical map view).
-            #lattice_frame_grapher(display, peak_yield_lattice, D, L) 
+            lattice_frame_grapher(display, peak_yield_lattice, D, L) 
             
             # We want to inquire more about 
             component_frequency_grapher(display, peak_yield_lattice, D, L, logg)
 
-            #yields2trees_added_LIST.append(average_yield2trees_added) # For plotting yields by densities later
+            yields2trees_added_LIST.append(average_yield2trees_added) # For plotting yields by densities later
         # Now to plot the peak yield curves for this value of D.
-        #yieldBYdensity_grapher(display, D, yields2trees_added_LIST)
+        yieldBYdensity_grapher(display, D, yields2trees_added_LIST)
 
 def simulator(D, L):
     """
@@ -334,11 +334,14 @@ def yieldBYdensity_grapher(display, D, yields2trees_added_LIST):
         axes.set_ylabel("Average Yield $<Y> = p - <c>$") 
 
         green_patch = mpatches.Patch(color='green', label="$L=2$")
-        yellow_patch = mpatches.Patch(color='yellow', label="$L=32$")
-        red_patch = mpatches.Patch(color='red', label="$L=64$")
+        yellow_patch = mpatches.Patch(color='yellow', label="$L=4$")
+        orange_patch = mpatches.Patch(color='orange', label="$L=16$")
+        red_patch = mpatches.Patch(color='red', label="$L=32$")
+        black_patch = mpatches.Patch(color='black', label="$L=64$")
+        purple_patch = mpatches.Patch(color='purple', label="$L=128$")
 
-        plt.legend(handles=[green_patch, yellow_patch, red_patch])
-        cmap = {2:'green', 32:'yellow', 64:'red'}
+        plt.legend(handles=[green_patch, yellow_patch, orange_patch, red_patch, black_patch, purple_patch])
+        cmap = {2:'green', 4:'yellow', 16:'orange', 32:'red', 64:'black', 128:'purple'}
         axes.plot(x, y, linestyle='-',  label='L = {L}'.format(L=L), color=cmap[L])
 
         plt.savefig("yield_by_density_D{D}.png".format(D=D))
