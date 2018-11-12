@@ -16,7 +16,6 @@ import numpy as np
 from skimage import measure
 import random as random
 import math
-from collections import Counter
 
 # Plotting Imports
 import matplotlib.pyplot as plt
@@ -32,12 +31,8 @@ import sys
 # =============================================================================
 # ==========================    "KNOB" VARIABLES    ===========================
 # =============================================================================
-L_values = [16] # 2, 4, 16, 32, 64, 128 
-D_values = [2] # [1,2,"L","L_squared"]
-
-# D2L2records = {} # The dictionary representing the main data structure to record 
-# # any generated data I compute below. 
-# D2L2max_yields = {} # For recording and plotting max yield for each L, etc. 
+L_values = [32] # 2, 4, 16, 32, 64, 128 
+D_values = [1] # [1,2,"L","L_squared"]
 
 # =============================================================================
 # ========================      FUNCTIONS     =================================
@@ -55,7 +50,7 @@ def main(L_values, D_values):
     print("--- NOW RUNNING SIMULATIONS ---")
 
     # Call to run animation functionality.
-    display = True
+    display = False
     logg = True 
 
     for D in D_values:
@@ -392,13 +387,13 @@ def yieldBYdensity_grapher(display, D, yields2trees_added_LIST):
 
         green_patch = mpatches.Patch(color='green', label="$L=2$")
         yellow_patch = mpatches.Patch(color='yellow', label="$L=4$")
-        orange_patch = mpatches.Patch(color='orange', label="$L=16$")
-        red_patch = mpatches.Patch(color='red', label="$L=32$")
+        orange_patch = mpatches.Patch(color='orange', label="$L=8$")
+        red_patch = mpatches.Patch(color='red', label="$L=16$")
+        purple_patch = mpatches.Patch(color='purple', label="$L=32$")
         black_patch = mpatches.Patch(color='black', label="$L=64$")
-        purple_patch = mpatches.Patch(color='purple', label="$L=128$")
 
         plt.legend(handles=[green_patch, yellow_patch, orange_patch, red_patch, black_patch, purple_patch])
-        cmap = {2:'green', 4:'yellow', 16:'orange', 32:'red', 64:'black', 128:'purple'}
+        cmap = {2:'green', 4:'yellow', 8:'orange', 16:'red', 32:'purple', 64:'black'}
         axes.plot(x, y, linestyle='-',  label='L = {L}'.format(L=L), color=cmap[L])
 
         plt.savefig("yield_by_density_D{D}.png".format(D=D))
@@ -430,6 +425,8 @@ def component_frequency_grapher(display, peak_yield_lattice, D, L, logg):
         Nothing, but if display=True an animation will appear in the external animation and save
         to user machine.             
     """
+    component_size2count = {}
+
     # Plotting distributions of tree component size `S` at peak yield. 
     # Calculating the connected components. 
     connected_components = measure.label(peak_yield_lattice, connectivity=1)
@@ -441,9 +438,12 @@ def component_frequency_grapher(display, peak_yield_lattice, D, L, logg):
     # We don't want to consider the empty squares here. 
     del components2size[0]
 
-    counter_object = Counter(components2size)
-    component_size2count = dict(counter_object.items())
-
+    for component_id in components2size.keys():
+        try:
+            component_size2count[components2size[component_id]] += 1
+        except KeyError:
+            component_size2count[components2size[component_id]] = 1
+    
     freqBYcomponent_size = plt.figure()
     axes = freqBYcomponent_size.add_subplot(111)
 
@@ -469,9 +469,10 @@ def component_frequency_grapher(display, peak_yield_lattice, D, L, logg):
         axes.scatter(np.log10(x), np.log10(y), color="purple", alpha=0.33)
         axes.set_title("Component Size $S$ Frequencies, D = {D}, L = {L}".format(D=D, L=L))
         axes.set_xlabel("Component Size $S$, ($log_{10}$)")
-        axes.set_ylabel("Count of Components of Size $N$, ($log_{10}$)")
+        axes.set_ylabel("Count of Components of Size $S$, ($log_{10}$)")
         plt.savefig("component_frequency_log{D}.png".format(D=D))
-        plt.show()
+        if display == True:
+            plt.show()
 
 # =============================================================================
 # ========================      MAIN LOGIC CALL        ========================
