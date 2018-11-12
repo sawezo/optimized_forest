@@ -8,6 +8,6 @@
 
 
 
-![](/Users/westzone/Desktop/complex_system/pocs/07/peak_yield_L16_DL_squared.png)
+![](./peak_yield_L16_DL_squared.png)
 
-![yield_by_density_D1](/Users/westzone/Desktop/complex_system/pocs/07/yield_by_density_D1.png)
+![yield_by_density_D1](./yield_by_density_D1.png)
