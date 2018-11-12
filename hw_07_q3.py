@@ -32,7 +32,7 @@ import sys
 # ==========================    "KNOB" VARIABLES    ===========================
 # =============================================================================
 L_values = [32] # 2, 4, 16, 32, 64, 128 
-D_values = [1] # [1,2,"L","L_squared"]
+D_values = [2] # [1,2,"L","L_squared"]
 
 # =============================================================================
 # ========================      FUNCTIONS     =================================
@@ -50,17 +50,17 @@ def main(L_values, D_values):
     print("--- NOW RUNNING SIMULATIONS ---")
 
     # Call to run animation functionality.
-    display = False
+    display = True
     logg = True 
 
     for D in D_values:
         yields2trees_added_LIST = [] # Will reset this for each D value. 
 
         for L in L_values:
-            trees_added2lattice, average_yield2trees_added = simulator(D, L)
+            trees_added2lattice, average_yield2trees_added, density2lattice = simulator(D, L)
 
             # Running the animation for this simulation. 
-            run_animation(display, trees_added2lattice)
+            run_animation(display, trees_added2lattice, L, D)
 
             # We are going to want to analyze the specific peak yield state. 
             peak_yield = max(average_yield2trees_added.keys())
@@ -77,6 +77,8 @@ def main(L_values, D_values):
             yields2trees_added_LIST.append(average_yield2trees_added) 
         # Now to plot the peak yield curves for this value of D.
         yieldBYdensity_grapher(display, D, yields2trees_added_LIST)
+        # Finally we plot component size frequencies across densities. 
+        # component_sizeBYdensity_grapher(display, D, density2lattice)
 
 def simulator(D, L):
     """
@@ -88,7 +90,9 @@ def simulator(D, L):
     - Function Output: 
         Function Outputs the following information for graphing purposes. 
             - trees_added2lattice: Dictionary of trees added (int) to lattice (numpy matrix). 
-            - average_yield2trees_added: Dictionary of average yield (float) to trees added here (int). 
+            - average_yield2trees_added: Dictionary of average yield (float) to trees added here (int).
+            - density2lattice: Dictionary of density of forest (float) to the lattice only for 
+              specified densities to save for later plotting. 
     """
     # Addressing any issues from type(L) == String.
     if D == "L":
@@ -99,6 +103,7 @@ def simulator(D, L):
     # We start this process by defining data structures we are going to be utilizing. 
     trees_added2lattice = {} # For holding data to animate.
     average_yield2trees_added = {} # For plotting max yield data. 
+    density2lattice = {} # For plotting.
     trees_added = 0
 
     # Initializing both the spark and the empty simulation lattice (the latter being that we look to fill). 
@@ -126,11 +131,14 @@ def simulator(D, L):
         trees_added += 1 # Incrementing this here since yield will need to be computed - 
         # - (used for density calculation) to select which tree to add.
 
+        density = (trees_added/(L**2)) # It is important to note this was done after appending a tree - 
+        # to our trees_added counter. 
+
         for test_tree_index in test_tree_indeces:                                
             # Computing and saving our average forest fire size for this test tree. 
             average_forest_fire_size = cost_calc(spark_probability_lattice, \
                                                 simulation_lattice, test_tree_index)
-            density = (trees_added/(L**2))
+        
             average_yield = density - (average_forest_fire_size/(L**2)) # We want cost in terms of density.    
             average_yield2index[average_yield] = test_tree_index
 
@@ -140,6 +148,9 @@ def simulator(D, L):
         
         # Removing the chosen index from our "empty" index list and adding it to the simulation lattice.             
         simulation_lattice[chosen_index[0], chosen_index[1]] = 1
+
+        if (density % .25) == 0:
+                density2lattice[density] = simulation_lattice.copy() # For graphing later. 
 
         # Since the test tree index has now been determined, we remove the - 
         # - index from the array of empty indeces. 
@@ -152,7 +163,7 @@ def simulator(D, L):
         trees_added2lattice[trees_added] = simulation_lattice.copy() # For animation.
         average_yield2trees_added[highest_yield] = trees_added # For plotting peak yield.
 
-    return trees_added2lattice, average_yield2trees_added
+    return trees_added2lattice, average_yield2trees_added, density2lattice
 
 def spark_probability_matrix(index_list):
     """
@@ -277,7 +288,7 @@ def fix_chosen_index(chosen_index):
 
     return fixed_chosen_index
 
-def run_animation(display, trees_added2lattice):
+def run_animation(display, trees_added2lattice, L, D):
     """
     - Function Description:
        Function runs the animate function nested within (to utilize the trees added to lattice matrix 
@@ -317,9 +328,11 @@ def run_animation(display, trees_added2lattice):
     fig = plt.figure()
     frame_count = len(trees_added2lattice.keys())
     ani = animation.FuncAnimation(fig, animate, frames=frame_count, repeat=True, interval=1)
-    
+    ani.save('animaz.gif', dpi=80, writer='imagemagick')
+
     if display == True:
         plt.show()
+    
 
 def lattice_frame_grapher(display, peak_yield_lattice, D, L):
     """
@@ -473,6 +486,37 @@ def component_frequency_grapher(display, peak_yield_lattice, D, L, logg):
         plt.savefig("component_frequency_log{D}.png".format(D=D))
         if display == True:
             plt.show()
+
+# def component_sizeBYdensity_grapher(display, D, density2lattice):
+#     """
+#     fdsa
+#     """
+#     # Plotting the yield curves for each value of D, and identifying (approximately) the - 
+#     # - peak yield and density for which peak yield occurs on each,
+#     Q3pd = plt.figure()
+#     axes = Q3pd.add_subplot(111)  
+
+#     x = list(density2lattice.keys()) # Densities.
+#     y = list(density2lattice.values())
+
+    # axes.set_title("")
+    # axes.set_xlabel("Event Size $c$") 
+    # axes.set_ylabel("Cumulative Probability $F(c)$") 
+
+    # green_patch = mpatches.Patch(color='green', label="$L=2$")
+    # yellow_patch = mpatches.Patch(color='yellow', label="$L=4$")
+    # orange_patch = mpatches.Patch(color='orange', label="$L=8$")
+    # red_patch = mpatches.Patch(color='red', label="$L=16$")
+    # purple_patch = mpatches.Patch(color='purple', label="$L=32$")
+    # black_patch = mpatches.Patch(color='black', label="$L=64$")
+
+    # plt.legend(handles=[green_patch, yellow_patch, orange_patch, red_patch, black_patch, purple_patch])
+    # axes.plot(x, y, linestyle='-')
+
+    # plt.savefig("component_sizeBYdensity_D{D}.png".format(D=D))
+
+    # if display == True:
+    #     plt.show()
 
 # =============================================================================
 # ========================      MAIN LOGIC CALL        ========================
