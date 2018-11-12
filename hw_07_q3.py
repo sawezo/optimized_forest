@@ -2,9 +2,9 @@
 # -*- coding: utf-8 -*-
 
 """
-Created Oct 2018
+Created Oct, 2018
 File to replicate simulation of a model to determine optimal firebreaks for timber yield.
-Inspiration from Professor Dodds, University of Vermont
+Inspiration from Professor Dodds, University of Vermont.
 @author: Samuel Zonay
 """
 
@@ -32,7 +32,7 @@ import sys
 # =============================================================================
 # ==========================    "KNOB" VARIABLES    ===========================
 # =============================================================================
-L_values = [2,4,16,32] # 2, 32, 64, 128 
+L_values = [16] # 2, 4, 16, 32, 64, 128 
 D_values = [2] # [1,2,"L","L_squared"]
 
 # D2L2records = {} # The dictionary representing the main data structure to record 
@@ -44,9 +44,16 @@ D_values = [2] # [1,2,"L","L_squared"]
 # =============================================================================
 def main(L_values, D_values):
     """
-    fdsa
+    - Function Description:
+        Function takes in a list of values to run the simulation on and processes program calls.
+    - Function Inputs:
+        - L_values: List of L values (lattice perimiter), (type=list).
+        - D_values: List of D values (design parameter), (type=list).
+    - Function Output: 
+        Function has no output.
     """
     print("--- NOW RUNNING SIMULATIONS ---")
+
     # Call to run animation functionality.
     display = True
     logg = True 
@@ -71,13 +78,22 @@ def main(L_values, D_values):
             # We want to inquire more about 
             component_frequency_grapher(display, peak_yield_lattice, D, L, logg)
 
-            yields2trees_added_LIST.append(average_yield2trees_added) # For plotting yields by densities later
+            # For plotting yields by densities later
+            yields2trees_added_LIST.append(average_yield2trees_added) 
         # Now to plot the peak yield curves for this value of D.
         yieldBYdensity_grapher(display, D, yields2trees_added_LIST)
 
 def simulator(D, L):
     """
-    fdsa
+    - Function Description:
+        Function takes in specific D and L values and runs the simulation on each. 
+    - Function Inputs:
+        - D: The L value (lattice perimiter), (type=int).
+        - D_values: The D value (design parameter), (type=int).
+    - Function Output: 
+        Function Outputs the following information for graphing purposes. 
+            - trees_added2lattice: Dictionary of trees added (int) to lattice (numpy matrix). 
+            - average_yield2trees_added: Dictionary of average yield (float) to trees added here (int). 
     """
     # Addressing any issues from type(L) == String.
     if D == "L":
@@ -114,6 +130,7 @@ def simulator(D, L):
 
         trees_added += 1 # Incrementing this here since yield will need to be computed - 
         # - (used for density calculation) to select which tree to add.
+
         for test_tree_index in test_tree_indeces:                                
             # Computing and saving our average forest fire size for this test tree. 
             average_forest_fire_size = cost_calc(spark_probability_lattice, \
@@ -148,10 +165,10 @@ def spark_probability_matrix(index_list):
        Function takes in a list of lattice indeces and returns a matrix of the 
        spark probabilities for each of those indeces. 
     - Function Inputs:
-        - initial_lattice: Initial lattice for which we are going to compute the spark
-        probabilities for.
+        - index_list: List of indeces for which we need to compute the spark
+        probabilities for (list).
     - Function Output: 
-        spark_probability_matrix: Normalized matrix of spark probabilities (numpy 2-D array). 
+        - spark_probability_lattice: Normalized matrix of spark probabilities (numpy matrix). 
     """
     # We will start by adding the test tree index to the array we are curious about. 
     # The returned matrix should be of the same initial lattice size. 
@@ -170,17 +187,17 @@ def spark_probability_matrix(index_list):
 
 def cost_calc(spark_probability_lattice, simulation_lattice, test_tree_index):
     """
-    - Function Description:fdsa
+    - Function Description:
        Function takes in simulation information and returns the average cost calculated when a 
        given test tree is placed in the current simulation lattice. The equation for average forest 
-       fire size (used to compute the cost) is \sum_{i, j} P(i, j), S(i, j), where P represents spark 
+       fire size (used to compute the cost) is $\sum_{i, j} P(i, j) S(i, j)$, where P represents spark 
        probability at location (i, j) and S represents the size of any current component at the same spot.
     - Function Inputs:
-        spark_probability_lattice: Spark probability matrix for this simulation (numpy matrix).
-        simulation_lattice: Current simulation lattice we are testing with (numpy matrix).
-        test_tree_index: Index (list of integers) of index to test putting an additional tree at. 
+        - spark_probability_lattice: Spark probability matrix for this simulation (numpy matrix).
+        - simulation_lattice: Current simulation lattice we are testing with (numpy matrix).
+        - test_tree_index: Index (list of integers) of index to test putting an additional tree at. 
     - Function Output: 
-        calculated_average_cost: The estimated average cost of a fire (with cost here being fire size).
+        - calculated_average_cost: The estimated average cost of a fire (with cost here being fire size).
     """
     # Initializing the variable we are looking to compute. Its a summation so we will find - 
     # it via incrementation. 
@@ -222,14 +239,23 @@ def cost_calc(spark_probability_lattice, simulation_lattice, test_tree_index):
 
 def fix_chosen_index(chosen_index):
     """
-    fdsa Array parser 
-    for manual edits of [0 2] vs [0, 2] error
+    - Function Description:
+       Function ammends an error that occurs when there is only one item remaining in the list of 
+       indeces with no trees. In particular, function changes an array being represented as [0 2]
+       to [0, 2], including given double digits or additional whitespace padding. 
+    - Function Inputs:
+        - chosen_index: String representation of index we want to fix so we can work with. 
+    - Function Output: 
+        - fixed_chosen_index: The updated index that will no longer give the main looping an ValueErrors. 
     """
     items = list(str(chosen_index))
     
+    # Containers incase there are multiple digits to a single numerical. 
     i_value = ""
     j_value = ""
 
+    # Initial settings; note the switch signifying no number has been saved yet (out of two total) - 
+    # - as shown by `number` being set to 1 to start. 
     number = 1
     first_space = 0
     for char in items:
@@ -251,17 +277,32 @@ def fix_chosen_index(chosen_index):
         elif char == "]":
             pass
 
+    # The chosen index is returned with correct forms. 
     fixed_chosen_index = [int(i_value), int(j_value)]
 
     return fixed_chosen_index
 
 def run_animation(display, trees_added2lattice):
     """
-    fdsa
+    - Function Description:
+       Function runs the animate function nested within (to utilize the trees added to lattice matrix 
+       dictionary). 
+    - Function Inputs:
+        - display: Whether or not we want to display graphs to user terminal (Boolean).
+        - trees_added2lattice: A dictionary mapping the count of trees added to the lattice at the addition. 
+    - Function Output: 
+        - Nothing, but if display=True an animation will appear. 
     """
     def animate(frame_index):
         """
-        fdsa
+        - Function Description:
+            Function represents the animate function nested within (to utilize the trees
+            added to the lattice matrix dictionary). During its runtime an animation will process, 
+            with the option for it to print to the user's terminal. 
+        - Function Inputs:
+            - frame_index: the index of the frame to run (int), as required bt matplot Animate. 
+        - Function Output: 
+            - Nothing, but if display=True an animation will appear in the external animation 
         """
         # Internal Function Code.
         simulation_lattice = trees_added2lattice[frame_index] 
@@ -286,33 +327,49 @@ def run_animation(display, trees_added2lattice):
         plt.show()
 
 def lattice_frame_grapher(display, peak_yield_lattice, D, L):
-        """
-        fdsa
-        """
-        Q3a_fig = plt.figure()
-        axes = Q3a_fig.add_subplot(111)
-        axes.set_title("Tree Space at Optimal Yield, Design Parameter $D$ = {D}".format(D=D))
-        axes.set_xlabel("$L$ = {L}".format(L=L))
-        green_patch = mpatches.Patch(color='green', label="tree")
-        brown_patch = mpatches.Patch(color='brown', label="dirt")
-        plt.legend(handles=[green_patch, brown_patch])
+    """
+    - Function Description:
+        Function graphs a lattice of a specified lattice (intended to be used for peak yield lattice). 
+    - Function Inputs:
+        display: Whether or not we want to display graphs to user terminal (Boolean).
+        peak_yield_lattice: Lattice we wish to plot (numpy matrix).
+        D: Current design parameter value (int). 
+        L: Current perimiter size value (int). 
+    - Function Output: 
+        Nothing, but if display=True an animation will appear in the external animation and save
+        user machine.  
+    """
+    Q3a_fig = plt.figure()
+    axes = Q3a_fig.add_subplot(111)
+    axes.set_title("Tree Space at Optimal Yield, Design Parameter $D$ = {D}".format(D=D))
+    axes.set_xlabel("$L$ = {L}".format(L=L))
+    green_patch = mpatches.Patch(color='green', label="tree")
+    brown_patch = mpatches.Patch(color='brown', label="dirt")
+    plt.legend(handles=[green_patch, brown_patch])
 
-        color_map = colors.ListedColormap(['brown', 'green'])
-        plt.imshow(peak_yield_lattice, cmap=color_map)
+    color_map = colors.ListedColormap(['brown', 'green'])
+    plt.imshow(peak_yield_lattice, cmap=color_map)
 
-        plt.savefig("peak_yield_L{L}_D{D}.png".format(L=L, D=D))
+    plt.savefig("peak_yield_L{L}_D{D}.png".format(L=L, D=D))
 
-        if display == True:
-            plt.show()
+    if display == True:
+        plt.show()
 
 def yieldBYdensity_grapher(display, D, yields2trees_added_LIST):
-    """
-    fdsa
+    """    
+    - Function Description:
+        Function graphs yield curves (Y = density - cost, <Y> = density - <cost>) for multiple L values for 
+        a given D value. 
+    - Function Inputs:
+        display: Whether or not we want to display graphs to user terminal (Boolean).
+        D: Current design parameter value (int). 
+        yields2trees_added_LIST: A list of dictionarys of yields to number of trees added. 
+    - Function Output: 
+        Nothing, but if display=True an animation will appear in the external animation and save
+        to user machine.             
     """
     # Plotting the yield curves for each value of D, and identifying (approximately) the - 
-    # - peak yield and density for which peak yield occurs on each
-    # color_map = {2:"green", 32:"yellow", 64:"red", 128:"orange"}
-    # print(L_dictionary_datalist[0])
+    # - peak yield and density for which peak yield occurs on each,
     Q3pb = plt.figure()
     axes = Q3pb.add_subplot(111)
     max_yield2density = {} # To fill and caluclate max yield over all L's to user terminal. 
@@ -359,8 +416,19 @@ def yieldBYdensity_grapher(display, D, yields2trees_added_LIST):
         plt.show()
 
 def component_frequency_grapher(display, peak_yield_lattice, D, L, logg):
-    """
-    fdsa
+    """   
+    - Function Description:
+        Function graphs yield curves (Y = density - cost, <Y> = density - <cost>) for multiple L values for 
+        a given D value. 
+    - Function Inputs:
+        display: Whether or not we want to display graphs to user terminal (Boolean).
+        peak_yield_lattice: Lattice we wish to plot (numpy matrix).
+        D: Current design parameter value (int). 
+        L: Current perimiter size value (int). 
+        logg: Whether or not we want to plot logged graph also (Boolean). 
+    - Function Output: 
+        Nothing, but if display=True an animation will appear in the external animation and save
+        to user machine.             
     """
     # Plotting distributions of tree component size `S` at peak yield. 
     # Calculating the connected components. 
@@ -378,7 +446,6 @@ def component_frequency_grapher(display, peak_yield_lattice, D, L, logg):
 
     freqBYcomponent_size = plt.figure()
     axes = freqBYcomponent_size.add_subplot(111)
-    # color_map = {20:"black", 50:"green", 100:"yellow", 200:"orange", 500:"red",1000:"blue"}
 
     # for L in L2runningAvg_pvals.keys():
     x = list(component_size2count.keys()) # The x axis is the sizes S of the components.
@@ -389,8 +456,7 @@ def component_frequency_grapher(display, peak_yield_lattice, D, L, logg):
     # Labelling and making the plot output look nicer. 
     axes.set_title("Component Size $S$ Frequencies, D = {D}, L = {L}".format(D=D, L=L))
     axes.set_xlabel("Component Size $S$") # , ($log_{10}$)
-    axes.set_ylabel("Count of Components of Size $N$") # , ($log_{10}$)
-    # axes.legend(['$L = 20$','$L = 50$','$L = 100$','$L = 200$','$L = 500$']) # ,'$L = 1000$'
+    axes.set_ylabel("Count of Components of Size $S$") # , ($log_{10}$)
     
     plt.savefig("component_frequency{D}.png".format(D=D))
 
@@ -400,12 +466,10 @@ def component_frequency_grapher(display, peak_yield_lattice, D, L, logg):
     if logg == True:
         freqBYcomponent_size_LOG = plt.figure()
         axes = freqBYcomponent_size_LOG.add_subplot(111)
-        
         axes.scatter(np.log10(x), np.log10(y), color="purple", alpha=0.33)
         axes.set_title("Component Size $S$ Frequencies, D = {D}, L = {L}".format(D=D, L=L))
         axes.set_xlabel("Component Size $S$, ($log_{10}$)")
         axes.set_ylabel("Count of Components of Size $N$, ($log_{10}$)")
-        # axes.legend(['$L = 20$','$L = 50$','$L = 100$','$L = 200$','$L = 500$']) # ,'$L = 1000$'
         plt.savefig("component_frequency_log{D}.png".format(D=D))
         plt.show()
 
@@ -413,13 +477,3 @@ def component_frequency_grapher(display, peak_yield_lattice, D, L, logg):
 # ========================      MAIN LOGIC CALL        ========================
 # =============================================================================
 main(L_values, D_values)
-
-# ========================      SCRAP                  ========================
-
-
-# ========================      Q's/ OTHER                  ===================
-# TO-DO:
-    # Part d) Extra level: Plot size distributions for D = L2 for varying tree densities
-    # ρ = 0.10, 0.20, . . . , 0.90. This will be an effort to reproduce Fig. 3b in [2].
-
-    # save animation imaging to computer.
