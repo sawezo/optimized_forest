@@ -6,5 +6,6 @@ An implementation and exploration of J.M. Carlson and J. Doyle's "[Robustness an
 
 This paper studies how the introduction of even small engineering processes can create vast differences in the behavior of complex systems, and the consequences that follow. For a more in depth look, check out the corresponding post on my [website](https://www.zonay.net/). 
 
-![yield_curve_output_gif](./imgs/yield_curves.gif)
+> ![yield_curve_output_gif](./imgs/yield_curves.gif)
+>
 

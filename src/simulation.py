@@ -33,7 +33,6 @@ def plant_tree(forest_grid, idx):
     forest_grid_test[idx[0], idx[1]] = 1 # planting a new tree
     
     # connected components of trees and their sizes
-    # ADD connectivity argument?
     components_grid, _ = label_components(forest_grid_test)
     components, counts = np.unique(components_grid, return_counts=True)
     component2size = dict(zip(components, counts))
